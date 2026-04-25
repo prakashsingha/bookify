@@ -8,6 +8,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { ClerkPricingActivePlanHighlight } from "@/components/ClerkPricingActivePlanHighlight";
 import Navbar from "@/components/Navbar";
 import { ClerkProvider } from "@clerk/nextjs";
 
@@ -62,6 +63,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
+          <ClerkPricingActivePlanHighlight />
           <Navbar />
           {children}
         </ClerkProvider>

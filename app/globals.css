@@ -401,6 +401,7 @@
   }
   .vapi-cover-image {
     @apply relative w-[130px] h-[195px] sm:w-[162px] sm:h-[240px] rounded-lg object-cover;
+
     box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
   }
   .vapi-mic-wrapper {
@@ -436,6 +437,7 @@
   }
   .vapi-badge-ai-text {
     @apply text-sm font-medium text-[#212a3b];
+
     font-family: "IBM Plex Serif", serif;
   }
   .vapi-status-indicator {
@@ -461,6 +463,7 @@
   }
   .vapi-status-text {
     @apply text-sm font-medium text-[#212a3b];
+
     font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-box {
@@ -471,10 +474,12 @@
   }
   .vapi-stat-label {
     @apply text-lg font-medium text-[#212a3b] mb-3;
+
     font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-value-lg {
     @apply text-[30px] font-semibold text-black leading-9;
+
     font-family: "IBM Plex Serif", serif;
   }
   .vapi-stat-value-sm {
@@ -510,6 +515,7 @@
 
     &:hover {
       @apply bg-gray-50;
+
       box-shadow: var(--shadow-soft);
     }
   }
@@ -518,6 +524,7 @@
 
     &:hover {
       @apply bg-gray-50;
+
       box-shadow: var(--shadow-soft);
     }
   }
@@ -531,6 +538,7 @@
 
   .library-steps-card {
     @apply bg-white p-4 rounded-[10px];
+
     list-style: none;
   }
   .library-steps-card div {
@@ -538,6 +546,7 @@
   }
   .library-step-item {
     @apply flex items-start gap-3;
+
     list-style: none;
   }
   .library-step-number {
@@ -625,6 +634,7 @@
   }
   .voice-selector-option {
     @apply flex-1 flex items-center justify-center gap-3 p-4 border border-[var(--border-subtle)] rounded-lg cursor-pointer transition-all;
+
     box-shadow: var(--shadow-soft-sm);
 
     &:hover {
@@ -670,6 +680,7 @@
   }
   .book-card-cover {
     @apply w-auto h-[170px] md:h-[200px] object-cover rounded-lg;
+
     box-shadow: var(--shadow-book);
   }
   .book-card-meta {
@@ -677,6 +688,7 @@
   }
   .book-card-title {
     @apply font-bold text-[#212a3b] line-clamp-1 text-base md:text-xl leading-[22px] md:leading-[30px];
+
     font-family: "IBM Plex Serif", serif;
   }
   .book-card-author {
@@ -731,6 +743,7 @@
      =========================================== */
   .back-btn-floating {
     @apply fixed top-24 left-6 z-50 size-12 rounded-full bg-white border border-[var(--border-subtle)] flex items-center justify-center transition-all;
+
     box-shadow: var(--shadow-soft);
 
     &:hover {
@@ -929,9 +942,7 @@ button[data-variant="unstyled"] *,
   font-weight: 600 !important;
 }
 
-/* Active plan card highlight — :first-child is a heuristic; prefer adding
-   `.active-plan` from JS when you know the current plan (see nitpick / Clerk docs). */
-.cl-pricingTableCard:first-child,
+/* Active plan card — `.active-plan` is set by ClerkPricingActivePlanHighlight (see components). */
 .cl-pricingTableCard.active-plan {
   border: 2px solid #663820 !important;
 }
