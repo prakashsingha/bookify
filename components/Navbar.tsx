@@ -35,7 +35,7 @@ const Navbar = () => {
           <span className="logo-text">Bookify</span>
         </Link>
 
-        <nav className="w-fit flex gap7.5 items-center">
+        <nav className="w-fit flex gap-7.5 items-center">
           {navItems.map((item) => {
             const isActive =
               pathName === item.href ||
@@ -67,7 +67,7 @@ const Navbar = () => {
             <Show when="signed-in">
               <div className="nav-user-link">
                 <UserButton />
-                {user?.firstName && (
+                {(user?.username || user?.firstName) && (
                   <Link href="/subscription" className="nav-user-name">
                     {user.username || user.firstName}
                   </Link>

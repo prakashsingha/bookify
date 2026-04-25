@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "covers.openlibrary.org",
+        pathname: "/b/isbn/**",
       },
     ],
   },

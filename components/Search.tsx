@@ -13,8 +13,12 @@ const Search = () => {
   const [query, setQuery] = useState(searchParams.get("query") || "");
 
   useEffect(() => {
+    setQuery(searchParams.get("query") || "");
+  }, [searchParams]);
+
+  useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams(searchParams.toString());
 
       if (query) {
         params.set("query", query);
@@ -22,11 +26,17 @@ const Search = () => {
         params.delete("query");
       }
 
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      const next = params.toString();
+      const current = searchParams.toString();
+      if (next === current) {
+        return;
+      }
+
+      router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [query, pathname, router]);
+  }, [query, pathname, router, searchParams]);
 
   return (
     <div className="library-search-wrapper">

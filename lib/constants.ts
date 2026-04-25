@@ -97,9 +97,6 @@ export const ACCEPTED_IMAGE_TYPES = [
   "image/webp",
 ];
 
-// Pre-configured VAPI assistant ID (hardcoded for this app)
-export const ASSISTANT_ID = process.env.NEXT_PUBLIC_ASSISTANT_ID!;
-
 // 11Labs Voice IDs - Optimized for conversational AI
 // Voices selected for natural, engaging book conversations
 export const voiceOptions = {
@@ -132,14 +129,16 @@ export const voiceOptions = {
   },
 };
 
+export type VoiceKey = keyof typeof voiceOptions;
+
 // Voice categories for the selector UI
-export const voiceCategories = {
+export const voiceCategories: { male: VoiceKey[]; female: VoiceKey[] } = {
   male: ["dave", "daniel", "chris"],
   female: ["rachel", "sarah"],
 };
 
 // Default voice
-export const DEFAULT_VOICE = "rachel";
+export const DEFAULT_VOICE: VoiceKey = "rachel";
 
 // ElevenLabs voice settings optimized for conversational AI
 export const VOICE_SETTINGS = {

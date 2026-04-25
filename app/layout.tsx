@@ -8,7 +8,6 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { relative } from "path";
 import Navbar from "@/components/Navbar";
 import { ClerkProvider } from "@clerk/nextjs";
 
@@ -32,7 +31,7 @@ const ibmPlexSerif = IBM_Plex_Serif({
 });
 
 const monaSans = Mona_Sans({
-  variable: "--font-mona-sana",
+  variable: "--font-mona-sans",
   subsets: ["latin"],
   display: "swap",
 });
@@ -49,24 +48,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html
-        lang="en"
-        className={cn(
-          "h-full",
-          "antialiased",
-          ibmPlexSerif.variable,
-          monaSans.variable,
-          relative,
-          "font-sans",
-          inter.variable,
-        )}
-      >
-        <body className="min-h-full flex flex-col">
+    <html
+      lang="en"
+      className={cn(
+        "h-full",
+        "antialiased",
+        ibmPlexSerif.variable,
+        monaSans.variable,
+        "relative",
+        "font-sans",
+        inter.variable,
+      )}
+    >
+      <body className="min-h-full flex flex-col">
+        <ClerkProvider>
           <Navbar />
           {children}
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }

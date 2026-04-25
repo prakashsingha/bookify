@@ -16,8 +16,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/Input";
-import { UploadFormValues, UploadSchema } from "@/lib/zod";
+import { UploadFormValues, UploadSchema, VOICE_IDS } from "@/lib/zod";
 import { cn } from "@/lib/utils";
+
+type UploadVoiceId = (typeof VOICE_IDS)[number];
 
 const voiceOptions = {
   male: [
@@ -29,7 +31,10 @@ const voiceOptions = {
     { value: "rachel", name: "Rachel", description: "Friendly and expressive conversational style." },
     { value: "sarah", name: "Sarah", description: "Soft and steady voice for immersive reading." },
   ],
-} as const;
+} as const satisfies {
+  male: ReadonlyArray<{ value: UploadVoiceId; name: string; description: string }>;
+  female: ReadonlyArray<{ value: UploadVoiceId; name: string; description: string }>;
+};
 const LoadingOverlay = () => {
   return (
     <div className="loading-wrapper">

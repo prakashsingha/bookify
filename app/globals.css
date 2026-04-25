@@ -216,7 +216,6 @@
   }
   .form-btn {
     @apply !w-full h-14 rounded-[10px] bg-[#663820] cursor-pointer hover:bg-[#7a4528] text-xl text-white font-bold transition-colors;
-    font-family: "IBM Plex Serif", serif;
   }
   .loading-wrapper {
     @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm;
@@ -277,7 +276,6 @@
   /* Button utilities */
   .btn-primary {
     @apply inline-flex items-center justify-center px-6 py-3 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-bold rounded-[10px] transition-colors;
-    font-family: "IBM Plex Serif", serif;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center px-6 py-3 bg-white hover:bg-gray-50 text-[var(--text-secondary)] font-medium rounded-[10px] transition-colors;
@@ -509,7 +507,6 @@
   }
   .library-cta-primary {
     @apply inline-flex items-center justify-center gap-2 bg-white text-[var(--text-primary)] px-5 py-3 rounded-[10px] font-bold text-base md:text-xl transition-all w-full lg:w-fit;
-    font-family: "IBM Plex Serif", serif;
 
     &:hover {
       @apply bg-gray-50;
@@ -518,13 +515,20 @@
   }
   .library-cta-secondary {
     @apply inline-flex items-center gap-2 bg-white text-[var(--text-primary)] px-5 py-3 rounded-[10px] font-bold text-xl transition-all;
-    font-family: "IBM Plex Serif", serif;
 
     &:hover {
       @apply bg-gray-50;
       box-shadow: var(--shadow-soft);
     }
   }
+
+  .form-btn,
+  .btn-primary,
+  .library-cta-primary,
+  .library-cta-secondary {
+    font-family: var(--font-ibm-plex-serif), "IBM Plex Serif", serif;
+  }
+
   .library-steps-card {
     @apply bg-white p-4 rounded-[10px];
     list-style: none;
@@ -925,10 +929,10 @@ button[data-variant="unstyled"] *,
   font-weight: 600 !important;
 }
 
-/* Add accent border to active plan card
-   Note: This uses :first-child which assumes active plan is always first.
-   If Clerk changes the order, this may highlight the wrong card. */
-.cl-pricingTableCard:first-child {
+/* Active plan card highlight — :first-child is a heuristic; prefer adding
+   `.active-plan` from JS when you know the current plan (see nitpick / Clerk docs). */
+.cl-pricingTableCard:first-child,
+.cl-pricingTableCard.active-plan {
   border: 2px solid #663820 !important;
 }
 
@@ -943,18 +947,7 @@ button[data-variant="unstyled"] *,
   border-radius: 9999px !important;
 }
 
-/* Add "Current Plan" indicator to active plan that doesn't have a button
-   Note: Hardcoded English text - if i18n support is needed, this should be
-   handled in JavaScript with translated strings rendered in the DOM. */
-.cl-pricingTableCard:first-child .cl-pricingTableCardContent::after {
-  content: "Your Current Plan";
-  display: block;
-  text-align: center;
-  padding: 0.75rem 1.5rem;
-  margin-top: 1rem;
-  background-color: #f3e4c7 !important;
-  color: #212a3b !important;
-  font-weight: 600;
-  border-radius: 0.75rem;
-  font-size: 1.125rem;
-}
+/* TODO(i18n): "Current plan" badge was removed from CSS `content:` (not translatable).
+   When you add a Clerk pricing wrapper component, render the label with your
+   `t('your_current_plan')` (or similar) and reuse styles via a dedicated class
+   matching the previous badge (bg #f3e4c7, padding, radius, font-weight). */
