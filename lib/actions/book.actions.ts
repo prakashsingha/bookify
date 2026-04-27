@@ -37,7 +37,6 @@ export const createBook = async (data: CreateBook) => {
 export const saveBookSegments = async (bookId: string, clerkId:string, segments: TextSegment[]) => {
     try {
         await connectToDb();
-        console.log("Saving book segments", bookId, clerkId, segments);
         
         const segmentsToSave = segments.map(segment => ({
             ...segment,
@@ -105,10 +104,10 @@ export const getBookBySlug = async (slug: string, clerkId: string) => {
     }
 }
 
-export const getAllBooks = async () => {
+export const getAllBooks = async (clerkId: string) => {
     try {
         await connectToDb();
-        const books = await Book.find().sort({createdAt: -1}).lean();
+        const books = await Book.find({ clerkId }).sort({createdAt: -1}).lean();
         return {
             success: true,
             data: serializeData(books)

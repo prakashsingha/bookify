@@ -124,7 +124,7 @@ const UploadForm = () => {
 
     // Check if book already exists
     try {
-      const checkResult = await checkBookExists(formData.title);
+      const checkResult = await checkBookExists(formData.title, userId);
       if (checkResult?.exists && checkResult.data) {
         toast.info("Book with the same title already exists");
         form.reset();
@@ -134,6 +134,7 @@ const UploadForm = () => {
 
       const fileTitle = generateSlug(formData.title) || `book-${new Date().getTime()}`;
       const pdfFile = formData.pdfFile;
+      // parsePDFFile depends on browser APIs (window/document/canvas), so keep it in this client flow.
       const parsedPdf = await parsePDFFile(pdfFile);
       if(parsedPdf.content.length === 0){
         toast.error("Failed to parse PDF file. Please try again with a different file.");

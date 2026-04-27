@@ -92,6 +92,10 @@ export const formatDuration = (seconds: number): string => {
 
 export async function parsePDFFile(file: File) {
   try {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      throw new Error('parsePDFFile must run in a browser runtime (window/document unavailable)');
+    }
+
     // Use the legacy build for broader browser compatibility in client-side parsing.
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
