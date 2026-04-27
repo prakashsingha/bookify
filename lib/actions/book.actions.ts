@@ -10,7 +10,8 @@ export const createBook = async (data: CreateBook) => {
     try {
         await connectToDb();
         const slug = generateSlug(data.title);
-        const existingBook = await Book.findOne({ slug }).lean();
+        // const existingBook = await Book.findOne({ slug }).lean();
+        const existingBook = await Book.findOne({ slug, clerkId: data.clerkId }).lean();
         if (existingBook) {
             return { 
                 success: true, 
@@ -72,11 +73,11 @@ export const saveBookSegments = async (bookId: string, clerkId:string, segments:
     }
 }
 
-export const checkBookExists = async (title:string) => {
+export const checkBookExists = async (title:string, clerkId:string) => {
     try {
         await connectToDb();
         const slug = generateSlug(title);
-        const existingBook = await Book.findOne({ slug }).lean();
+        const existingBook = await Book.findOne({ slug, clerkId }).lean();
         if (existingBook) {
             return { success: true, exists: true, data: serializeData(existingBook) };
         }

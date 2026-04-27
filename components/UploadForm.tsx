@@ -126,13 +126,13 @@ const UploadForm = () => {
     try {
       const checkResult = await checkBookExists(formData.title);
       if (checkResult?.exists && checkResult.data) {
-        toast.info("Book with the same titlealready exists");
+        toast.info("Book with the same title already exists");
         form.reset();
         router.push(`/books/${checkResult.data.slug}`);
         return;
       }
 
-      const fileTitle = generateSlug(formData.title) || `book-${Date.now()}`;
+      const fileTitle = generateSlug(formData.title) || `book-${new Date().getTime()}`;
       const pdfFile = formData.pdfFile;
       const parsedPdf = await parsePDFFile(pdfFile);
       if(parsedPdf.content.length === 0){
@@ -178,7 +178,6 @@ const UploadForm = () => {
           blob,
           blob.type || "image/png",
         );
-        coverUrl = uploadedCover.url;
 
         if(!uploadedCover){
           toast.error("Failed to upload cover image. Please try again with a different file.");
@@ -220,7 +219,6 @@ const UploadForm = () => {
         return;
       }
 
-      setIsSubmitting(true);
       toast.success("Book created successfully");
       router.push(`/books/${book.data.slug}`);
     } catch (error) {

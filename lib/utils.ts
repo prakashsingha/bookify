@@ -163,8 +163,6 @@ export async function parsePDFFile(file: File) {
       fullText += pageText + '\n';
     }
 
-    console.log("Full text", fullText);
-
     // Split text into segments for search
     const segments = splitIntoSegments(fullText);
 
