@@ -10,7 +10,6 @@ export const createBook = async (data: CreateBook) => {
     try {
         await connectToDb();
         const slug = generateSlug(data.title);
-        // const existingBook = await Book.findOne({ slug }).lean();
         const existingBook = await Book.findOne({ slug, clerkId: data.clerkId }).lean();
         if (existingBook) {
             return { 

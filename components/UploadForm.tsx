@@ -153,11 +153,11 @@ const UploadForm = () => {
           return;
         }
 
-      let coverUrl: string;
-      let coverBlobPathname: string;
+      let uploadedCover: { url: string; pathname: string } | null = null;
+
       if (formData.coverImage && formData.coverImage.size > 0) {
         const coverFile = formData.coverImage;
-        const uploadedCover = await uploadViaServer(
+        uploadedCover = await uploadViaServer(
           `${fileTitle}_cover.png`,
           coverFile,
           coverFile.type || "image/png",
@@ -168,25 +168,18 @@ const UploadForm = () => {
           form.reset();
           return;
         }
-        coverUrl = uploadedCover.url;
-        coverBlobPathname = uploadedCover.pathname;
       }else{
         const response = await fetch(parsedPdf.cover);
         const blob = await response.blob();
-        const uploadedCover = await uploadViaServer(
+        uploadedCover = await uploadViaServer(
           `${fileTitle}_cover.png`,
           blob,
           blob.type || "image/png",
         );
-
-        if(!uploadedCover){
-          toast.error("Failed to upload cover image. Please try again with a different file.");
-          form.reset();
-          return;
-        }
-        coverUrl = uploadedCover.url;
-        coverBlobPathname = uploadedCover.pathname;
       }
+
+      const coverUrl = uploadedCover.url;
+      const coverBlobPathname = uploadedCover.pathname;
 
       const book = await createBook({
         clerkId: userId,
