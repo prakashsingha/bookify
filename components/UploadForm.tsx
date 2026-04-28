@@ -112,6 +112,47 @@ const UploadForm = () => {
     return data;
   };
 
+  const deleteUploadedBlob = async (pathname: string) => {
+    const response = await fetch("/api/upload", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pathname }),
+    });
+
+    if (!response.ok) {
+      const bodyText = await response.text();
+      let message = "Failed to delete uploaded file";
+      try {
+        const data = JSON.parse(bodyText) as { error?: string };
+        message = data.error ?? message;
+      } catch {
+        if (bodyText) message = bodyText;
+      }
+      throw new Error(message);
+    }
+  };
+
+  const cleanupUploadedFiles = async (...pathnames: string[]) => {
+    const uniquePathnames = [...new Set(pathnames.filter(Boolean))];
+    if (uniquePathnames.length === 0) return;
+
+    await Promise.all(
+      uniquePathnames.map(async (pathname) => {
+        try {
+          await deleteUploadedBlob(pathname);
+        } catch (error) {
+          console.error("Failed to cleanup uploaded blob", pathname, error);
+        }
+      }),
+    );
+  };
+
+  const resetFormAndFiles = () => {
+    form.reset();
+    if (pdfInputRef.current) pdfInputRef.current.value = "";
+    if (coverInputRef.current) coverInputRef.current.value = "";
+  };
+
   const onSubmit = async (formData: BookUploadFormValues) => {
     if(!userId) {
       return toast.error("You must be logged in to upload a book");
@@ -127,7 +168,7 @@ const UploadForm = () => {
       const checkResult = await checkBookExists(formData.title, userId);
       if (checkResult?.exists && checkResult.data) {
         toast.info("Book with the same title already exists");
-        form.reset();
+        resetFormAndFiles();
         router.push(`/books/${checkResult.data.slug}`);
         return;
       }
@@ -138,7 +179,7 @@ const UploadForm = () => {
       const parsedPdf = await parsePDFFile(pdfFile);
       if(parsedPdf.content.length === 0){
         toast.error("Failed to parse PDF file. Please try again with a different file.");
-        form.reset();
+        resetFormAndFiles();
         return;
       }
 
@@ -150,7 +191,7 @@ const UploadForm = () => {
       
         if(!uploadedPdf){
           toast.error("Failed to upload PDF file. Please try again with a different file.");
-          form.reset();
+          resetFormAndFiles();
           return;
         }
 
@@ -166,7 +207,7 @@ const UploadForm = () => {
 
         if(!uploadedCover){
           toast.error("Failed to upload cover image. Please try again with a different file.");
-          form.reset();
+          resetFormAndFiles();
           return;
         }
       }else{
@@ -195,12 +236,14 @@ const UploadForm = () => {
       });
 
       if(!book.success){
+        await cleanupUploadedFiles(uploadedPdf.pathname, uploadedCover.pathname);
         toast.error(book.error || "Failed to create book. Please try again.");
-        form.reset();
+        resetFormAndFiles();
         return;
       }
 
       if(book.alreadyExists){
+        await cleanupUploadedFiles(uploadedPdf.pathname, uploadedCover.pathname);
         toast.info("Book with the same title already exists");
         router.push(`/books/${book.data.slug}`);
         return;
@@ -208,12 +251,14 @@ const UploadForm = () => {
       
       const segments = await saveBookSegments(book.data._id, userId, parsedPdf.content);
       if(!segments.success){
+        await cleanupUploadedFiles(uploadedPdf.pathname, uploadedCover.pathname);
         toast.error(segments.error || "Failed to save book segments. Please try again.");
-        form.reset();
+        resetFormAndFiles();
         return;
       }
 
       toast.success("Book created successfully");
+      resetFormAndFiles();
       router.push(`/books/${book.data.slug}`);
     } catch (error) {
       console.error("Error uploading book", error);

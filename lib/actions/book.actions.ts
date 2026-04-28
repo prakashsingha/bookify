@@ -10,6 +10,12 @@ export const createBook = async (data: CreateBook) => {
     try {
         await connectToDb();
         const slug = generateSlug(data.title);
+        if (!slug) {
+            return {
+                success: false,
+                error: "Title must include at least one letter or number"
+            };
+        }
         const existingBook = await Book.findOne({ slug, clerkId: data.clerkId }).lean();
         if (existingBook) {
             return { 
@@ -20,7 +26,7 @@ export const createBook = async (data: CreateBook) => {
         }
 
         // TODO: Check subscription limits before creating a new book
-        const book = await Book.create({ ...data, slug, totalSegments: 0 });
+        const book = await Book.create({ ...data, slug, clerkId: data.clerkId, totalSegments: 0 });
         return {
             success: true,
             alreadyExists: false,

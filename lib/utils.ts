@@ -91,11 +91,18 @@ export const formatDuration = (seconds: number): string => {
 };
 
 export async function parsePDFFile(file: File) {
-  try {
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      throw new Error('parsePDFFile must run in a browser runtime (window/document unavailable)');
-    }
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    throw new Error('parsePDFFile must run in a browser runtime (window/document unavailable)');
+  }
 
+  let loadingTask: {
+    promise: Promise<any>;
+    destroy?: () => Promise<void> | void;
+    cancel?: () => void;
+  } | null = null;
+  let pdfDocument: { destroy: () => Promise<void> | void; numPages: number; getPage: (pageNum: number) => Promise<any>; } | null = null;
+
+  try {
     // Use the legacy build for broader browser compatibility in client-side parsing.
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
@@ -111,11 +118,13 @@ export async function parsePDFFile(file: File) {
     const pdfData = new Uint8Array(arrayBuffer);
 
     // Load PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
-    const pdfDocument = await loadingTask.promise;
+    loadingTask = pdfjsLib.getDocument({ data: pdfData });
+    pdfDocument = await loadingTask.promise;
+    if (!pdfDocument) throw new Error('Failed to load PDF document');
+    const loadedPdfDocument = pdfDocument;
 
     // Render first page as cover image
-    const firstPage = await pdfDocument.getPage(1);
+    const firstPage = await loadedPdfDocument.getPage(1);
     const viewport = firstPage.getViewport({ scale: 2 }); // 2x scale for better quality
 
     const canvas = document.createElement('canvas');
@@ -139,8 +148,8 @@ export async function parsePDFFile(file: File) {
     // Extract text from all pages
     let fullText = '';
 
-    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-      const page = await pdfDocument.getPage(pageNum);
+    for (let pageNum = 1; pageNum <= loadedPdfDocument.numPages; pageNum++) {
+      const page = await loadedPdfDocument.getPage(pageNum);
 
       let textItems: Array<{ str?: string }> = [];
       try {
@@ -170,9 +179,6 @@ export async function parsePDFFile(file: File) {
     // Split text into segments for search
     const segments = splitIntoSegments(fullText);
 
-    // Clean up PDF document resources
-    await pdfDocument.destroy();
-
     return {
       content: segments,
       cover: coverDataURL,
@@ -180,5 +186,18 @@ export async function parsePDFFile(file: File) {
   } catch (error) {
     console.error('Error parsing PDF:', error);
     throw new Error(`Failed to parse PDF file: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    try {
+      if (pdfDocument) await pdfDocument.destroy();
+    } catch (cleanupError) {
+      console.warn('Error destroying PDF document:', cleanupError);
+    }
+
+    try {
+      if (loadingTask?.destroy) await loadingTask.destroy();
+      else loadingTask?.cancel?.();
+    } catch (cleanupError) {
+      console.warn('Error cleaning up PDF loading task:', cleanupError);
+    }
   }
 }
