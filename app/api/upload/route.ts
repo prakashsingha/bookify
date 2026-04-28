@@ -3,6 +3,7 @@ import { del, put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+const MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -30,6 +31,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (!(file instanceof Blob)) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 });
+    }
+
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+      return NextResponse.json({ error: "File too large" }, { status: 413 });
     }
 
     const blob = await put(pathname, file, {

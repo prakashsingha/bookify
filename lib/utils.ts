@@ -85,8 +85,9 @@ export const getVoice = (persona?: string) => {
 
 // Format duration in seconds to MM:SS format
 export const formatDuration = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const totalSeconds = Math.floor(seconds);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
@@ -130,7 +131,7 @@ export async function parsePDFFile(file: File) {
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    const context = canvas.getContext('2d');
+    let context = canvas.getContext('2d');
 
     if (!context) {
       throw new Error('Could not get canvas context');
@@ -144,6 +145,10 @@ export async function parsePDFFile(file: File) {
 
     // Convert canvas to data URL
     const coverDataURL = canvas.toDataURL('image/png');
+    canvas.remove();
+    canvas.width = 0;
+    canvas.height = 0;
+    context = null;
 
     // Extract text from all pages
     let fullText = '';

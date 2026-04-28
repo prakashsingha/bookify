@@ -18,7 +18,7 @@ export const UploadSchema = z.object({
     }),
   coverImage: z
     .instanceof(File)
-    .refine((file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type as string), {
+    .refine((file) => ACCEPTED_IMAGE_TYPES.includes(file.type), {
       message: "Only .jpg, .jpeg, .png, and .webp files are supported.",
     })
     .refine((file) => file.size <= MAX_IMAGE_SIZE, {

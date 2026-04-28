@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
-import { notFound } from "next/navigation";
+import Image from "next/image";
+import { notFound, redirect } from "next/navigation";
 
 import { getBookBySlug } from "@/lib/actions/book.actions";
 
@@ -12,7 +13,7 @@ type BookPageProps = {
 const Page = async ({ params }: BookPageProps) => {
   const { userId } = await auth();
   if (!userId) {
-    notFound();
+    redirect("/sign-in");
   }
 
   const { slug } = await params;
@@ -32,9 +33,11 @@ const Page = async ({ params }: BookPageProps) => {
         </section>
 
         <section className="grid gap-6 md:grid-cols-[220px,1fr]">
-          <img
+          <Image
             src={book.coverURL}
             alt={`${book.title} cover`}
+            width={220}
+            height={320}
             className="w-full rounded-xl border border-[var(--border-medium)] object-cover"
           />
 

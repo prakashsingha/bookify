@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileImage, FileText, Upload, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -60,15 +60,8 @@ const LoadingOverlay = () => {
 
 const UploadForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const { userId } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    setTimeout(() => {
-      setIsMounted(true);
-    }, 100);
-  }, []);
 
   
   const pdfInputRef = useRef<HTMLInputElement>(null);
@@ -188,36 +181,37 @@ const UploadForm = () => {
         pdfFile,
         "application/pdf",
       );
-      
-        if(!uploadedPdf){
-          toast.error("Failed to upload PDF file. Please try again with a different file.");
-          resetFormAndFiles();
-          return;
-        }
 
       let uploadedCover: { url: string; pathname: string } | null = null;
-
-      if (formData.coverImage && formData.coverImage.size > 0) {
-        const coverFile = formData.coverImage;
-        uploadedCover = await uploadViaServer(
-          `${fileTitle}_cover.png`,
-          coverFile,
-          coverFile.type || "image/png",
-        );
-
-        if(!uploadedCover){
-          toast.error("Failed to upload cover image. Please try again with a different file.");
-          resetFormAndFiles();
-          return;
+      try {
+        if (formData.coverImage && formData.coverImage.size > 0) {
+          const coverFile = formData.coverImage;
+          uploadedCover = await uploadViaServer(
+            `${fileTitle}_cover.png`,
+            coverFile,
+            coverFile.type || "image/png",
+          );
+        } else {
+          const response = await fetch(parsedPdf.cover);
+          const blob = await response.blob();
+          uploadedCover = await uploadViaServer(
+            `${fileTitle}_cover.png`,
+            blob,
+            blob.type || "image/png",
+          );
         }
-      }else{
-        const response = await fetch(parsedPdf.cover);
-        const blob = await response.blob();
-        uploadedCover = await uploadViaServer(
-          `${fileTitle}_cover.png`,
-          blob,
-          blob.type || "image/png",
-        );
+      } catch {
+        toast.error("Failed to upload cover image. Please try again with a different file.");
+        resetFormAndFiles();
+        await cleanupUploadedFiles(uploadedPdf.pathname);
+        return;
+      }
+
+      if (!uploadedCover) {
+        toast.error("Failed to upload cover image. Please try again with a different file.");
+        resetFormAndFiles();
+        await cleanupUploadedFiles(uploadedPdf.pathname);
+        return;
       }
 
       const coverUrl = uploadedCover.url;
@@ -527,7 +521,7 @@ const UploadForm = () => {
               )}
             />
 
-            <Button type="submit" className="form-btn" disabled={form.formState.isSubmitting}>
+            <Button type="submit" className="form-btn" disabled={isSubmitting}>
               <FileText className="mr-2 h-5 w-5" />
               Begin Synthesis
             </Button>

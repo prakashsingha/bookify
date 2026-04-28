@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   throw new Error("MONGODB_URI is not defined");
@@ -33,14 +33,17 @@ async function connectToDb() {
   }
 
   try {
+    const isNewConnection = !cached!.conn;
     cached!.conn = await cached!.promise;
+    if (isNewConnection) {
+      console.info("Connected to MongoDB");
+    }
   } catch (error) {
     cached!.promise = null;
     console.error("Error connecting to MongoDB. Please make sure MongoDB is running.", error);
     throw error;
   }
 
-  console.info("Connected to MongoDB");
   return cached!.conn;
 }
 
