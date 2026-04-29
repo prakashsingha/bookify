@@ -139,3 +139,23 @@ export interface EndSessionResult {
   success: boolean;
   error?: string;
 }
+
+interface SearchBookSegment {
+  _id: string;
+  segmentIndex: number;
+  pageNumber?: number;
+  content: string;
+  score?: number;
+}
+
+interface ToolCall {
+  id?: string;
+  name?: string;
+  arguments?: unknown;
+  parameters?: unknown;
+}
+
+interface SearchBookParameters {
+  bookId?: string;
+  query?: string;
+}
