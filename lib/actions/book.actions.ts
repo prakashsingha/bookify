@@ -5,6 +5,7 @@ import connectToDb from "@/database/mongoose";
 import { CreateBook, SearchBookSegment, TextSegment } from "@/types";
 import { generateSlug, serializeData } from "../utils";
 import BookSegment from "@/database/models/book-segment.model";
+import mongoose from "mongoose";
 
 export const createBook = async (data: CreateBook) => {
   try {
@@ -53,8 +54,11 @@ export const saveBookSegments = async (
   clerkId: string,
   segments: TextSegment[],
 ) => {
+  let session: mongoose.ClientSession | null = null;
   try {
     await connectToDb();
+    session = await mongoose.startSession();
+    session.startTransaction();
 
     const segmentsToSave = segments.map((segment) => ({
       ...segment,
@@ -66,10 +70,15 @@ export const saveBookSegments = async (
       pageNumber: segment.pageNumber,
     }));
 
-    const savedSegments = await BookSegment.insertMany(segmentsToSave);
-    await Book.findByIdAndUpdate(bookId, {
-      totalSegments: savedSegments.length,
-    });
+    const savedSegments = await BookSegment.insertMany(segmentsToSave, { session });
+    await Book.findByIdAndUpdate(
+      bookId,
+      {
+        totalSegments: savedSegments.length,
+      },
+      { session },
+    );
+    await session.commitTransaction();
     console.log(
       "Book updated with total segments",
       bookId,
@@ -83,14 +92,18 @@ export const saveBookSegments = async (
     };
   } catch (error) {
     console.error("Error saving book segments", error);
-    await BookSegment.deleteMany({ bookId });
-    await Book.findByIdAndDelete(bookId);
-    console.log("Book and segments deleted due to failure to save segments");
+    if (session) {
+      await session.abortTransaction();
+    }
     return {
       success: false,
       data: null,
       error: error instanceof Error ? error.message : String(error),
     };
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
 };
 

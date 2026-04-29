@@ -57,6 +57,7 @@ function Transcript({
       <div ref={scrollAreaRef} className="transcript-messages">
         {renderedMessages.map((message, index) => {
           const isUserMessage = message.role === "user";
+          const isLastMessage = index === renderedMessages.length - 1;
 
           return (
             <div
@@ -67,7 +68,8 @@ function Transcript({
                 className={`transcript-bubble ${isUserMessage ? "transcript-bubble-user" : "transcript-bubble-assistant"}`}
               >
                 {message.content}
-                {((message.role === "user" &&
+                {isLastMessage &&
+                  ((message.role === "user" &&
                   hasUserStream &&
                   message.content === currentUserMessage) ||
                   (message.role === "assistant" &&

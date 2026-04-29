@@ -10,6 +10,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
   const {
     status,
     isActive,
+    duration,
     start,
     stop,
     messages,
@@ -21,6 +22,25 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
   const isSpeakingOrThinking = status === "speaking" || status === "thinking";
   const showPulseRing = isActive && isSpeakingOrThinking;
+  const safeVoice = book.persona?.trim() ? book.persona : "Default";
+  const statusLabel = status === "Idle" ? "Ready" : status;
+
+  function formatTime(totalSeconds: number): string {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }
+
+  const statusDotClass =
+    status === "listening"
+      ? "vapi-status-dot-listening"
+      : status === "thinking"
+        ? "vapi-status-dot-thinking"
+        : status === "speaking"
+          ? "vapi-status-dot-speaking"
+          : status === "connecting" || status === "starting"
+            ? "vapi-status-dot-connecting"
+            : "vapi-status-dot-ready";
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
@@ -63,14 +83,14 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="vapi-status-indicator">
-              <span className="vapi-status-dot vapi-status-dot-ready" />
-              <span className="vapi-status-text">Ready</span>
+              <span className={`vapi-status-dot ${statusDotClass}`} />
+              <span className="vapi-status-text">{statusLabel}</span>
             </div>
             <div className="vapi-status-indicator">
-              <span className="vapi-status-text">Voice: {book.persona}</span>
+              <span className="vapi-status-text">Voice: {safeVoice}</span>
             </div>
             <div className="vapi-status-indicator">
-              <span className="vapi-status-text">0:00/15:00</span>
+              <span className="vapi-status-text">{formatTime(duration)}</span>
             </div>
           </div>
         </div>

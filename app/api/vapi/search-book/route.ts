@@ -34,23 +34,32 @@ function parseObject(input: unknown): Record<string, unknown> {
 function toSearchBookParameters(call: ToolCall): SearchBookParameters {
   const params = parseObject(call.parameters);
   const args = parseObject(call.arguments);
-  const source = Object.keys(params).length > 0 ? params : args;
 
   return {
     bookId:
-      typeof source.bookId === "string"
-        ? source.bookId
-        : typeof source.book_id === "string"
-          ? source.book_id
-          : undefined,
+      typeof params.bookId === "string"
+        ? params.bookId
+        : typeof params.book_id === "string"
+          ? params.book_id
+          : typeof args.bookId === "string"
+            ? args.bookId
+            : typeof args.book_id === "string"
+              ? args.book_id
+              : undefined,
     query:
-      typeof source.query === "string"
-        ? source.query
-        : typeof source.searchQuery === "string"
-          ? source.searchQuery
-          : typeof source.topic === "string"
-            ? source.topic
-            : undefined,
+      typeof params.query === "string"
+        ? params.query
+        : typeof params.searchQuery === "string"
+          ? params.searchQuery
+          : typeof params.topic === "string"
+            ? params.topic
+            : typeof args.query === "string"
+              ? args.query
+              : typeof args.searchQuery === "string"
+                ? args.searchQuery
+                : typeof args.topic === "string"
+                  ? args.topic
+                  : undefined,
   };
 }
 
@@ -142,8 +151,25 @@ export async function POST(request: Request) {
       results,
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Invalid request payload";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const errorStatus =
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      typeof (error as { status?: unknown }).status === "number"
+        ? (error as { status: number }).status
+        : undefined;
+    const errorName =
+      error instanceof Error ? error.name : undefined;
+    const isValidationError =
+      errorName === "ValidationError" ||
+      errorStatus === 400 ||
+      errorStatus === 422;
+    const message = isValidationError
+      ? error instanceof Error
+        ? error.message
+        : "Invalid request payload"
+      : "Internal server error";
+    const status = isValidationError ? (errorStatus ?? 400) : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

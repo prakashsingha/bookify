@@ -3,17 +3,28 @@
 import connectToDb from "@/database/mongoose";
 import { EndSessionResult, StartSessionResult } from "@/types";
 import VoiceSession from "@/database/models/voice-session.model";
-import { getCurrentBillingPeriodStart } from "@/lib/subscription-constants";
+import {
+  DEFAULT_MAX_DURATION_MINUTES,
+  getCurrentBillingPeriodStart,
+} from "@/lib/subscription-constants";
+import { auth } from "@clerk/nextjs/server";
 
 export const startVoiceSession = async (
   bookId: string,
-  clerkId: string,
 ): Promise<StartSessionResult> => {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return {
+        success: false,
+        error: "Unauthorized",
+      };
+    }
+
     await connectToDb();
     const session = await VoiceSession.create({
       bookId,
-      clerkId,
+      clerkId: userId,
       //   startedAt: new Date(),
       billingPeriodStart: getCurrentBillingPeriodStart(),
       durationSeconds: 0,
@@ -21,7 +32,7 @@ export const startVoiceSession = async (
     return {
       success: true,
       sessionId: session._id.toString(),
-      maxDurationMinutes: session.maxDurationMinutes,
+      maxDurationMinutes: DEFAULT_MAX_DURATION_MINUTES,
       isBillingError: false,
     };
   } catch (error) {
@@ -38,9 +49,28 @@ export const endVoiceSession = async (
   durationSeconds: number,
 ): Promise<EndSessionResult> => {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return {
+        success: false,
+        error: "Unauthorized",
+      };
+    }
+
+    if (
+      typeof durationSeconds !== "number" ||
+      !Number.isFinite(durationSeconds) ||
+      durationSeconds < 0
+    ) {
+      return {
+        success: false,
+        error: "Invalid duration",
+      };
+    }
+
     await connectToDb();
-    const session = await VoiceSession.findByIdAndUpdate(
-      sessionId,
+    const session = await VoiceSession.findOneAndUpdate(
+      { _id: sessionId, clerkId: userId },
       {
         endedAt: new Date(),
         durationSeconds,

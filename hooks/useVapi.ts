@@ -123,14 +123,39 @@ export const useVapi = (book: IBook) => {
   // const remainingSeconds
   // const showTimeWarning
 
+  const clearDurationTimers = () => {
+    if (startTimerRef.current) {
+      clearTimeout(startTimerRef.current);
+      startTimerRef.current = null;
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const startDurationTimer = () => {
+    clearDurationTimers();
+    startTimerRef.current = setTimeout(() => {
+      timerRef.current = setInterval(() => {
+        setDuration((prev) => {
+          const next = prev + 1;
+          durationRef.current = next;
+          return next;
+        });
+      }, 1000);
+    }, 0);
+  };
+
   const start = async () => {
+    let createdSessionId: string | null = null;
     if (!userId) {
       return setLimitError("You must be logged in to start a session");
     }
     setLimitError(null);
     setStatus("connecting");
     try {
-      const result = await startVoiceSession(book._id, userId);
+      const result = await startVoiceSession(book._id);
 
       if (!result.success) {
         setLimitError(
@@ -140,7 +165,11 @@ export const useVapi = (book: IBook) => {
         return;
       }
 
-      sessionIdRef.current = result.sessionId || null;
+      createdSessionId = result.sessionId || null;
+      sessionIdRef.current = createdSessionId;
+      setDuration(0);
+      durationRef.current = 0;
+      startDurationTimer();
       const firstMessage = `Hey, good to meet you. Quick question, before we dive in: have you actually read ${book.title} yet? Or are we starting fresh?`;
 
       await getVapi().start(ASSISTANT_ID, {
@@ -164,6 +193,19 @@ export const useVapi = (book: IBook) => {
 
       setStatus("listening");
     } catch (error) {
+      const leakedSessionId = sessionIdRef.current ?? createdSessionId;
+      clearDurationTimers();
+
+      if (leakedSessionId) {
+        try {
+          await endVoiceSession(leakedSessionId, durationRef.current);
+        } catch (cleanupError) {
+          console.error("Error cleaning up leaked session", cleanupError);
+        } finally {
+          sessionIdRef.current = null;
+        }
+      }
+
       console.error("Error starting session", error);
       setStatus("Idle");
       setLimitError("An error occurred while starting the session");
@@ -173,6 +215,7 @@ export const useVapi = (book: IBook) => {
   const stop = async () => {
     isStoppingRef.current = true;
     setStatus("Idle");
+    clearDurationTimers();
     try {
       // const result = await endVoiceSession(sessionIdRef.current, duration);
 
@@ -183,7 +226,9 @@ export const useVapi = (book: IBook) => {
     }
   };
 
-  const clearErrors = async () => {};
+  const clearErrors = async () => {
+    setLimitError(null);
+  };
 
   useEffect(() => {
     const vapiInstance = getVapi();
@@ -195,6 +240,7 @@ export const useVapi = (book: IBook) => {
     };
 
     const onCallEnd = async () => {
+      clearDurationTimers();
       setStatus("Idle");
       setCurrentMessage("");
       setCurrentUserMessage("");
@@ -206,9 +252,14 @@ export const useVapi = (book: IBook) => {
         return;
       }
 
-      await endVoiceSession(sessionId, durationRef.current);
-      sessionIdRef.current = null;
-      isStoppingRef.current = false;
+      try {
+        await endVoiceSession(sessionId, durationRef.current);
+      } catch (error) {
+        console.error("Error ending session on call end", error);
+      } finally {
+        sessionIdRef.current = null;
+        isStoppingRef.current = false;
+      }
     };
 
     const onSpeechStart = () => {
@@ -259,6 +310,7 @@ export const useVapi = (book: IBook) => {
     vapiInstance.on("message", onMessage);
 
     return () => {
+      clearDurationTimers();
       vapiInstance.removeListener("call-start", onCallStart);
       vapiInstance.removeListener("call-end", onCallEnd);
       vapiInstance.removeListener("speech-start", onSpeechStart);
