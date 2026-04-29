@@ -140,7 +140,7 @@ export interface EndSessionResult {
   error?: string;
 }
 
-interface SearchBookSegment {
+export interface SearchBookSegment {
   _id: string;
   segmentIndex: number;
   pageNumber?: number;
@@ -148,14 +148,14 @@ interface SearchBookSegment {
   score?: number;
 }
 
-interface ToolCall {
+export interface ToolCall {
   id?: string;
   name?: string;
   arguments?: unknown;
   parameters?: unknown;
 }
 
-interface SearchBookParameters {
+export interface SearchBookParameters {
   bookId?: string;
   query?: string;
 }

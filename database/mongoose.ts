@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI is not defined");
+function getMongoUri(): string {
+  const mongodbUri = process.env.MONGODB_URI;
+  if (!mongodbUri) {
+    throw new Error("MONGODB_URI is not defined");
+  }
+  return mongodbUri;
 }
 
 declare global {
@@ -29,7 +31,7 @@ async function connectToDb() {
       bufferCommands: false,
     };
 
-    cached!.promise = mongoose.connect(MONGODB_URI, opts);
+    cached!.promise = mongoose.connect(getMongoUri(), opts);
   }
 
   try {
