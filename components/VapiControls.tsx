@@ -25,10 +25,14 @@ const VapiControls = ({ book }: { book: IBook }) => {
   const isSpeakingOrThinking = status === "speaking" || status === "thinking";
   const showPulseRing = isActive && isSpeakingOrThinking;
   const showMicOffIcon = !isActive;
-  const buttonAriaLabel = showMicOffIcon ? "Microphone off" : "Microphone on";
+  const buttonAriaLabel = showMicOffIcon
+    ? "Start voice session"
+    : "Stop voice session";
   const safeVoice = book.persona?.trim() ? book.persona : "Default";
   const statusLabel =
-    status === "Idle" ? "Ready" : status.charAt(0).toUpperCase() + status.slice(1);
+    status === "Idle"
+      ? "Ready"
+      : status.charAt(0).toUpperCase() + status.slice(1);
 
   function formatTime(totalSeconds: number): string {
     const mins = Math.floor(totalSeconds / 60);
@@ -68,7 +72,9 @@ const VapiControls = ({ book }: { book: IBook }) => {
             aria-label={buttonAriaLabel}
             title={buttonAriaLabel}
           >
-            {showPulseRing && <span className="vapi-pulse-ring" aria-hidden="true" />}
+            {showPulseRing && (
+              <span className="vapi-pulse-ring" aria-hidden="true" />
+            )}
             {showMicOffIcon ? (
               <MicOff className="size-6 text-[#9aa0a7]" strokeWidth={2.5} />
             ) : (

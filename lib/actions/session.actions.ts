@@ -3,6 +3,7 @@
 import connectToDb from "@/database/mongoose";
 import { EndSessionResult, StartSessionResult } from "@/types";
 import VoiceSession from "@/database/models/voice-session.model";
+import BillingCounter from "@/database/models/billing-counter.model";
 import {
   PLANS,
   getCurrentBillingPeriodStart,
@@ -27,15 +28,29 @@ export const startVoiceSession = async (
     const billingPeriodStart = getCurrentBillingPeriodStart();
 
     await connectToDb();
-    const currentPeriodSessionsCount = await VoiceSession.countDocuments({
-      clerkId: userId,
-      billingPeriodStart,
-    });
+    const counter = await BillingCounter.findOneAndUpdate(
+      { clerkId: userId, billingPeriodStart },
+      {
+        $inc: { sessionCount: 1 },
+        $setOnInsert: { clerkId: userId, billingPeriodStart },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+    const currentPeriodSessionsCount = counter?.sessionCount ?? 0;
 
     if (
       planLimits.maxSessionsPerMonth !== null &&
-      currentPeriodSessionsCount >= planLimits.maxSessionsPerMonth
+      currentPeriodSessionsCount > planLimits.maxSessionsPerMonth
     ) {
+      await BillingCounter.updateOne(
+        {
+          clerkId: userId,
+          billingPeriodStart,
+          sessionCount: { $gt: 0 },
+        },
+        { $inc: { sessionCount: -1 } },
+      );
+
       return {
         success: false,
         error: `You've reached your monthly session limit (${planLimits.maxSessionsPerMonth}) for the ${plan} plan. Upgrade to continue.`,
@@ -48,7 +63,18 @@ export const startVoiceSession = async (
       clerkId: userId,
       billingPeriodStart,
       durationSeconds: 0,
+    }).catch(async (error) => {
+      await BillingCounter.updateOne(
+        {
+          clerkId: userId,
+          billingPeriodStart,
+          sessionCount: { $gt: 0 },
+        },
+        { $inc: { sessionCount: -1 } },
+      );
+      throw error;
     });
+
     return {
       success: true,
       sessionId: session._id.toString(),

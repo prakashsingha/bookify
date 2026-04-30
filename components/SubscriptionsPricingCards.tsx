@@ -47,30 +47,43 @@ function getPriceParts(
   if (!plan.hasBaseFee) return { amount: "$0", suffix: "" };
   if (period === "annual") {
     const amount = plan.annualFee?.amountFormatted;
-    if (amount) return { amount: `${plan.annualFee?.currencySymbol ?? "$"}${amount}`, suffix: "/year" };
+    if (amount)
+      return {
+        amount: `${plan.annualFee?.currencySymbol ?? "$"}${amount}`,
+        suffix: "/year",
+      };
   }
   const monthly = plan.fee?.amountFormatted;
-  return { amount: `${plan.fee?.currencySymbol ?? "$"}${monthly ?? "0"}`, suffix: "/month" };
+  return {
+    amount: `${plan.fee?.currencySymbol ?? "$"}${monthly ?? "0"}`,
+    suffix: "/month",
+  };
 }
 
 function PlanCard({ plan }: { plan: BillingPlanResourceLike }) {
   const [isAnnual, setIsAnnual] = useState(false);
   const period: BillingPeriod = isAnnual ? "annual" : "month";
   const isPaidPlan = plan.hasBaseFee;
-  const { plan: currentPlan } = useCurrentUserPlan();
-  const isActivePlan = currentPlan === normalizePlanKey(plan);
+  const { plan: currentPlan, isLoaded } = useCurrentUserPlan();
+  const isActivePlan = isLoaded && currentPlan === normalizePlanKey(plan);
   const price = getPriceParts(plan, period);
 
   return (
-    <article className={`pricing-v2-card ${isActivePlan ? "is-active-plan" : ""}`}>
+    <article
+      className={`pricing-v2-card ${isActivePlan ? "is-active-plan" : ""}`}
+    >
       <header className="pricing-v2-header">
         <h3 className="pricing-v2-name">{plan.name}</h3>
-        {isActivePlan && <span className="pricing-v2-active-badge">Active</span>}
+        {isActivePlan && (
+          <span className="pricing-v2-active-badge">Active</span>
+        )}
       </header>
 
       <p className="pricing-v2-price">
         {price.amount}
-        {price.suffix && <span className="pricing-v2-price-suffix">{price.suffix}</span>}
+        {price.suffix && (
+          <span className="pricing-v2-price-suffix">{price.suffix}</span>
+        )}
       </p>
 
       {!isPaidPlan && <p className="pricing-v2-free-copy">Always free</p>}
@@ -102,7 +115,11 @@ function PlanCard({ plan }: { plan: BillingPlanResourceLike }) {
       {isPaidPlan && (
         <Show when="signed-in">
           <CheckoutButton planId={plan.id} planPeriod={period} for="user">
-            <button type="button" className="pricing-v2-cta" disabled={isActivePlan}>
+            <button
+              type="button"
+              className="pricing-v2-cta"
+              disabled={isActivePlan}
+            >
               {isActivePlan ? "Current plan" : "Subscribe"}
             </button>
           </CheckoutButton>
@@ -123,8 +140,12 @@ export function SubscriptionsPricingCards() {
     return rows.sort((a, b) => getPlanRank(a) - getPlanRank(b));
   }, [data]);
 
-  if (isLoading) return <p className="subtitle text-center">Loading plans...</p>;
-  if (isError) return <p className="subtitle text-center">Unable to load plans right now.</p>;
+  if (isLoading)
+    return <p className="subtitle text-center">Loading plans...</p>;
+  if (isError)
+    return (
+      <p className="subtitle text-center">Unable to load plans right now.</p>
+    );
 
   return (
     <section className="pricing-custom-wrapper mt-8 w-full">

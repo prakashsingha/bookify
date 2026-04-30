@@ -50,6 +50,15 @@ export interface IVoiceSession extends Document {
   updatedAt: Date;
 }
 
+export interface IBillingCounter extends Document {
+  _id: string;
+  clerkId: string;
+  billingPeriodStart: Date;
+  sessionCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ============================================
 // FORM & INPUT TYPES
 // ============================================

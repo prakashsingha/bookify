@@ -10,6 +10,7 @@ import { getCurrentUserPlan } from "@/lib/subscription.server";
 import { PLANS } from "@/lib/subscription-constants";
 
 export const createBook = async (data: CreateBook) => {
+  let session: mongoose.ClientSession | null = null;
   try {
     await connectToDb();
     const slug = generateSlug(data.title);
@@ -33,31 +34,72 @@ export const createBook = async (data: CreateBook) => {
 
     const plan = await getCurrentUserPlan();
     const planLimits = PLANS[plan];
-    const existingBooksCount = await Book.countDocuments({ clerkId: data.clerkId });
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    const existingBooksCount = await Book.countDocuments({ clerkId: data.clerkId }).session(session);
 
     if (existingBooksCount >= planLimits.maxBooks) {
+      await session.abortTransaction();
       return {
         success: false,
         error: `Your ${plan} plan allows up to ${planLimits.maxBooks} book${planLimits.maxBooks === 1 ? "" : "s"}. Upgrade to add more books.`,
       };
     }
 
-    const book = await Book.create({
-      ...data,
-      slug,
-      clerkId: data.clerkId,
-      totalSegments: 0,
-    });
+    const [book] = await Book.create(
+      [
+        {
+          ...data,
+          slug,
+          clerkId: data.clerkId,
+          totalSegments: 0,
+        },
+      ],
+      { session },
+    );
+
+    await session.commitTransaction();
     return {
       success: true,
       alreadyExists: false,
       data: serializeData(book),
     };
   } catch (error) {
+    if (session) {
+      await session.abortTransaction();
+    }
+
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      typeof error.code === "number" &&
+      error.code === 11000
+    ) {
+      const slug = generateSlug(data.title);
+      if (slug) {
+        const existingBook = await Book.findOne({
+          slug,
+          clerkId: data.clerkId,
+        }).lean();
+        if (existingBook) {
+          return {
+            success: true,
+            alreadyExists: true,
+            data: serializeData(existingBook),
+          };
+        }
+      }
+    }
+
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
     };
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
 };
 

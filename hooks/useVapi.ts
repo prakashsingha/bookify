@@ -40,7 +40,9 @@ interface VapiTranscriptMessage {
   transcript: string;
 }
 
-function isTranscriptMessage(message: unknown): message is VapiTranscriptMessage {
+function isTranscriptMessage(
+  message: unknown,
+): message is VapiTranscriptMessage {
   if (!message || typeof message !== "object") return false;
 
   const candidate = message as Partial<VapiTranscriptMessage>;
@@ -48,7 +50,8 @@ function isTranscriptMessage(message: unknown): message is VapiTranscriptMessage
   return (
     candidate.type === "transcript" &&
     (candidate.role === "user" || candidate.role === "assistant") &&
-    (candidate.transcriptType === "partial" || candidate.transcriptType === "final") &&
+    (candidate.transcriptType === "partial" ||
+      candidate.transcriptType === "final") &&
     typeof candidate.transcript === "string"
   );
 }
@@ -173,7 +176,8 @@ export const useVapi = (book: IBook) => {
 
   const start = useCallback(async () => {
     let createdSessionId: string | null = null;
-    if (isStartingRef.current || isStoppingRef.current || status !== "Idle") return;
+    if (isStartingRef.current || isStoppingRef.current || status !== "Idle")
+      return;
     isStartingRef.current = true;
     setIsBusy(true);
     suppressEventsUntilRef.current = 0;
@@ -373,7 +377,6 @@ export const useVapi = (book: IBook) => {
 
     const onError = (error: unknown) => {
       if (shouldIgnoreRuntimeEvents()) return;
-
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -382,7 +385,9 @@ export const useVapi = (book: IBook) => {
             : "";
 
       const isExpectedTeardownError =
-        /destroy|ended|already in progress|reconnect|cancel|closed/i.test(errorMessage);
+        /destroy|ended|already in progress|reconnect|cancel|closed/i.test(
+          errorMessage,
+        );
 
       if (!isExpectedTeardownError) {
         console.warn("Vapi runtime warning", error);
@@ -392,6 +397,20 @@ export const useVapi = (book: IBook) => {
       setStatus("Idle");
       setCurrentMessage("");
       setCurrentUserMessage("");
+      const sessionId = sessionIdRef.current;
+
+      if (sessionId) {
+        void endVoiceSession(sessionId, durationRef.current)
+          .catch((cleanupError) => {
+            console.error(
+              "Error ending session after Vapi error",
+              cleanupError,
+            );
+          })
+          .finally(() => {
+            sessionIdRef.current = null;
+          });
+      }
       isStartingRef.current = false;
       isStoppingRef.current = false;
       stopCompletedAtRef.current = Date.now();
@@ -456,9 +475,9 @@ export const useVapi = (book: IBook) => {
   }, [durationRef, getVapi]);
 
   useEffect(() => {
-    const fallbackMaxDurationSeconds = limits.maxMinutesPerSession * 60;
-    setMaxDurationSeconds(fallbackMaxDurationSeconds);
-  }, [limits.maxMinutesPerSession]);
+    if (sessionIdRef.current || isActive) return;
+    setMaxDurationSeconds(limits.maxMinutesPerSession * 60);
+  }, [isActive, limits.maxMinutesPerSession]);
 
   useEffect(() => {
     if (!isActive) return;

@@ -37,7 +37,7 @@ export const DEFAULT_MAX_DURATION_MINUTES = PLANS.free.maxMinutesPerSession;
 
 export const getCurrentBillingPeriodStart = () => {
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   return startOfMonth;
 };
 
