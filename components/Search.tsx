@@ -1,66 +1,76 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import { setLibrarySearchQuery } from "@/lib/actions/book.actions";
 import { Input } from "@/components/ui/Input";
 import { Search as SearchIcon } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-const Search = () => {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+interface LibrarySearchProps {
+  initialQuery: string;
+}
 
-  const initialQuery = searchParams.get("query") || "";
+export function LibrarySearch({ initialQuery }: LibrarySearchProps) {
   const [query, setQuery] = useState(initialQuery);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const debouncedUpdateUrl = useCallback(
-    (nextQuery: string) => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const rawQuery = formData.get("query");
+    const nextQuery = typeof rawQuery === "string" ? rawQuery.trim() : "";
+
+    startTransition(async () => {
+      const nextUrl = await setLibrarySearchQuery(formData);
+      const currentQuery = searchParams.get("query") ?? "";
+
+      if (nextQuery === currentQuery) {
+        return;
       }
 
-      debounceRef.current = setTimeout(() => {
-        const params = new URLSearchParams(searchParams.toString());
-
-        if (nextQuery) {
-          params.set("query", nextQuery);
-        } else {
-          params.delete("query");
-        }
-
-        const next = params.toString();
-        const current = searchParams.toString();
-        if (next === current) {
-          return;
-        }
-
-        router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-      }, 300);
-    },
-    [pathname, router, searchParams],
-  );
-
-  const handleChange = (value: string) => {
-    setQuery(value);
-    debouncedUpdateUrl(value);
-  };
+      router.replace(nextUrl, { scroll: false });
+    });
+  }
 
   return (
-    <div className="library-search-wrapper">
+    <form
+      onSubmit={handleSubmit}
+      className="library-search-wrapper sm:shrink-0"
+    >
       <div className="pl-4">
         <SearchIcon size={20} className="text-[var(--text-muted)]" />
       </div>
       <Input
-        type="text"
+        type="search"
+        name="query"
         aria-label="Search books by title or author"
         placeholder="Search books by title or author"
         className="library-search-input border-none shadow-none focus-visible:ring-0"
         value={query}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          setQuery(nextValue);
+          if (!nextValue && searchParams.get("query")) {
+            event.currentTarget.form?.requestSubmit();
+          }
+        }}
+        autoComplete="off"
       />
-    </div>
+      <button
+        type="submit"
+        className="px-4 py-2 text-sm font-medium text-[var(--text-primary)]"
+        disabled={isPending}
+        aria-label="Submit search"
+      >
+        Search
+      </button>
+    </form>
   );
-};
-
-export default Search;
+}

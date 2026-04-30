@@ -31,18 +31,7 @@ const useLatestRef = <T>(value: T) => {
   return ref;
 };
 
-let vapi: InstanceType<typeof Vapi> | null = null;
 const VAPI_API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY;
-
-const getVapi = () => {
-  if (!vapi) {
-    if (!VAPI_API_KEY) {
-      throw new Error("VAPI_API_KEY is not set");
-    }
-    vapi = new Vapi(VAPI_API_KEY);
-  }
-  return vapi;
-};
 
 interface VapiTranscriptMessage {
   type: "transcript";
@@ -96,6 +85,7 @@ export const useVapi = (book: IBook) => {
   const [limitError, setLimitError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
+  const vapiRef = useRef<InstanceType<typeof Vapi> | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimerRef = useRef<NodeJS.Timeout | null>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -170,6 +160,16 @@ export const useVapi = (book: IBook) => {
     new Promise<void>((resolve) => {
       setTimeout(resolve, ms);
     });
+
+  const getVapi = useCallback(() => {
+    if (!vapiRef.current) {
+      if (!VAPI_API_KEY) {
+        throw new Error("VAPI_API_KEY is not set");
+      }
+      vapiRef.current = new Vapi(VAPI_API_KEY);
+    }
+    return vapiRef.current;
+  }, []);
 
   const start = useCallback(async () => {
     let createdSessionId: string | null = null;
@@ -262,7 +262,7 @@ export const useVapi = (book: IBook) => {
     } finally {
       // Keep "starting" lock until call-start/error/call-end resolves startup race.
     }
-  }, [book, limits.maxMinutesPerSession, status, userId]);
+  }, [book, getVapi, limits.maxMinutesPerSession, status, userId]);
 
   const stop = useCallback(async () => {
     if (isStoppingRef.current) return;
@@ -303,7 +303,7 @@ export const useVapi = (book: IBook) => {
         setIsBusy(false);
       }, 1400);
     }
-  }, []);
+  }, [getVapi]);
 
   const clearErrors = useCallback(async () => {
     setLimitError(null);
@@ -453,7 +453,7 @@ export const useVapi = (book: IBook) => {
       vapiInstance.removeListener("error", onError);
       vapiInstance.removeListener("message", onMessage);
     };
-  }, [durationRef]);
+  }, [durationRef, getVapi]);
 
   useEffect(() => {
     const fallbackMaxDurationSeconds = limits.maxMinutesPerSession * 60;

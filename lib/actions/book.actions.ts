@@ -3,7 +3,7 @@
 import Book from "@/database/models/book.model";
 import connectToDb from "@/database/mongoose";
 import { CreateBook, SearchBookSegment, TextSegment } from "@/types";
-import { generateSlug, serializeData } from "../utils";
+import { escapeRegex, generateSlug, serializeData } from "../utils";
 import BookSegment from "@/database/models/book-segment.model";
 import mongoose from "mongoose";
 import { getCurrentUserPlan } from "@/lib/subscription.server";
@@ -173,6 +173,41 @@ export const getAllBooks = async (clerkId: string) => {
     };
   }
 };
+
+/** Library list with optional case-insensitive regex match on title or author (query escaped for safe substring search). */
+export const getLibraryBooks = async (clerkId: string, searchQuery?: string) => {
+  try {
+    await connectToDb();
+    const trimmed = searchQuery?.trim() ?? "";
+    const filter: Record<string, unknown> = { clerkId };
+    if (trimmed) {
+      const pattern = escapeRegex(trimmed);
+      filter.$or = [
+        { title: { $regex: pattern, $options: "i" } },
+        { author: { $regex: pattern, $options: "i" } },
+      ];
+    }
+    const books = await Book.find(filter).sort({ createdAt: -1 }).lean();
+    return {
+      success: true,
+      data: serializeData(books),
+    };
+  } catch (error) {
+    console.error("Error getting library books", error);
+    return {
+      success: false,
+      data: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+};
+
+export async function setLibrarySearchQuery(formData: FormData) {
+  const raw = formData.get("query");
+  const query = typeof raw === "string" ? raw : "";
+  const trimmed = query.trim();
+  return trimmed ? `/?query=${encodeURIComponent(trimmed)}` : "/";
+}
 
 export const searchBookSegments = async (
   bookId: string,
