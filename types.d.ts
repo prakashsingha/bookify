@@ -4,6 +4,7 @@ import { Control, FieldPath, FieldValues } from "react-hook-form";
 import { LucideIcon } from "lucide-react";
 import { z } from "zod";
 import { UploadSchema } from "@/lib/zod";
+import { PlanType } from "@/lib/subscription-constants";
 
 // ============================================
 // DATABASE MODELS
@@ -45,6 +46,15 @@ export interface IVoiceSession extends Document {
   endedAt?: Date;
   durationSeconds: number;
   billingPeriodStart: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IBillingCounter extends Document {
+  _id: string;
+  clerkId: string;
+  billingPeriodStart: Date;
+  sessionCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -116,12 +126,10 @@ export interface FileUploadFieldProps<T extends FieldValues> {
   placeholder: string;
   hint: string;
 }
-import { PLANS, PlanType } from "@/lib/subscription-constants";
-
 export interface SessionCheckResult {
   allowed: boolean;
   currentCount: number;
-  limit: number;
+  limit: number | null;
   plan: PlanType;
   maxDurationMinutes: number;
   error?: string;

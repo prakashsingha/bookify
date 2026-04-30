@@ -11,6 +11,8 @@ const VapiControls = ({ book }: { book: IBook }) => {
     status,
     isActive,
     duration,
+    maxDurationSeconds,
+    isBusy,
     start,
     stop,
     messages,
@@ -22,8 +24,15 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
   const isSpeakingOrThinking = status === "speaking" || status === "thinking";
   const showPulseRing = isActive && isSpeakingOrThinking;
+  const showMicOffIcon = !isActive;
+  const buttonAriaLabel = showMicOffIcon
+    ? "Start voice session"
+    : "Stop voice session";
   const safeVoice = book.persona?.trim() ? book.persona : "Default";
-  const statusLabel = status === "Idle" ? "Ready" : status;
+  const statusLabel =
+    status === "Idle"
+      ? "Ready"
+      : status.charAt(0).toUpperCase() + status.slice(1);
 
   function formatTime(totalSeconds: number): string {
     const mins = Math.floor(totalSeconds / 60);
@@ -55,18 +64,21 @@ const VapiControls = ({ book }: { book: IBook }) => {
           />
           <button
             onClick={isActive ? stop : start}
-            disabled={status === "connecting" || status === "starting"}
+            disabled={isBusy}
             type="button"
             className={`vapi-mic-btn absolute -bottom-2 -right-2 ${
               isActive ? "vapi-mic-btn-active" : "vapi-mic-btn-inactive"
             }`}
-            aria-label={isActive ? "Microphone on" : "Microphone off"}
+            aria-label={buttonAriaLabel}
+            title={buttonAriaLabel}
           >
-            {showPulseRing && <span className="vapi-pulse-ring" aria-hidden="true" />}
-            {isActive ? (
-              <Mic className="size-6 text-[#212a3b]" />
+            {showPulseRing && (
+              <span className="vapi-pulse-ring" aria-hidden="true" />
+            )}
+            {showMicOffIcon ? (
+              <MicOff className="size-6 text-[#9aa0a7]" strokeWidth={2.5} />
             ) : (
-              <MicOff className="size-6 text-[#9aa0a7]" />
+              <Mic className="size-6 text-[#212a3b]" />
             )}
           </button>
         </div>
@@ -91,6 +103,11 @@ const VapiControls = ({ book }: { book: IBook }) => {
             </div>
             <div className="vapi-status-indicator">
               <span className="vapi-status-text">{formatTime(duration)}</span>
+            </div>
+            <div className="vapi-status-indicator">
+              <span className="vapi-status-text">
+                Limit: {formatTime(maxDurationSeconds)}
+              </span>
             </div>
           </div>
         </div>

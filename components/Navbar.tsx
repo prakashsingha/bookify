@@ -6,7 +6,6 @@ import {
   SignInButton,
   SignUpButton,
   UserButton,
-  useUser,
 } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,11 +14,11 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { label: "Library", href: "/" },
   { label: "Add New", href: "/books/new" },
+  { label: "Pricing", href: "/subscriptions" },
 ];
 
 const Navbar = () => {
   const pathName = usePathname();
-  const { user } = useUser();
 
   return (
     <header className="w-full fixed z-50 bg-[var(--bg-primary)]">
@@ -54,7 +53,6 @@ const Navbar = () => {
               </Link>
             );
           })}
-
           <div className="flex gap-7.5 items-center">
             <Show when="signed-out">
               <SignInButton mode="modal" />
@@ -66,12 +64,7 @@ const Navbar = () => {
             </Show>
             <Show when="signed-in">
               <div className="nav-user-link">
-                <UserButton />
-                {(user?.username || user?.firstName) && (
-                  <Link href="/subscription" className="nav-user-name">
-                    {user.username || user.firstName}
-                  </Link>
-                )}
+                <UserButton showName />
               </div>
             </Show>
           </div>

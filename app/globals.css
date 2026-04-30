@@ -771,11 +771,139 @@
   margin-top: 12px !important;
 }
 
+.pricing-custom-wrapper {
+  padding: 0.5rem;
+  background: var(--bg-primary);
+}
+
+.pricing-grid {
+  @apply grid w-full gap-5 md:grid-cols-3;
+  justify-content: center;
+}
+
+.pricing-v2-card {
+  @apply flex min-h-[430px] flex-col rounded-2xl border border-[#e3e3e3] bg-[#fcfcfc] p-4;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.pricing-v2-card.is-active-plan {
+  border: 2px solid #663820;
+}
+
+.pricing-v2-header {
+  @apply mb-1 flex items-center justify-between;
+}
+
+.pricing-v2-name {
+  @apply text-[24px] font-bold leading-[36px] text-black;
+  font-family: var(--font-mona-sans), "Inter", sans-serif;
+}
+
+.pricing-v2-active-badge {
+  @apply rounded-full px-3 py-1 text-xs font-semibold;
+  background-color: #663820;
+  color: #fff;
+}
+
+.pricing-v2-price {
+  @apply text-[24px] font-bold leading-[36px] text-black;
+  font-family: var(--font-mona-sans), "Inter", sans-serif;
+}
+
+.pricing-v2-price-suffix {
+  @apply ml-1 text-sm font-medium text-[var(--text-secondary)];
+  font-family: var(--font-mona-sans), "Inter", sans-serif;
+}
+
+.pricing-v2-free-copy {
+  @apply mt-2 text-xs text-[var(--text-secondary)];
+  font-family: var(--font-mona-sans), "Inter", sans-serif;
+}
+
+.pricing-v2-toggle {
+  @apply mt-3 inline-flex w-fit items-center gap-2 rounded-lg border border-transparent bg-transparent px-0 py-0 text-sm;
+  color: var(--text-secondary);
+}
+
+.pricing-v2-toggle-knob {
+  width: 28px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #2a2f3f;
+  position: relative;
+  display: inline-block;
+}
+
+.pricing-v2-toggle-knob::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #fff;
+}
+
+.pricing-v2-toggle.is-on .pricing-v2-toggle-knob::after {
+  left: 14px;
+}
+
+.pricing-v2-toggle-label {
+  @apply text-xs font-medium text-[var(--text-secondary)];
+  font-family: var(--font-mona-sans), "Inter", sans-serif;
+}
+
+.pricing-v2-feature-wrap {
+  @apply mt-3 border-t border-[#e7e7e7] pt-4;
+}
+
+.pricing-v2-feature-list {
+  @apply flex flex-col gap-2;
+}
+
+.pricing-v2-feature-item {
+  @apply text-sm leading-5 text-[var(--text-secondary)];
+  font-family: var(--font-mona-sans), "Inter", sans-serif;
+}
+
+.pricing-v2-feature-item::before {
+  content: "✓";
+  margin-right: 0.5rem;
+  color: #9ca3af;
+}
+
+.pricing-v2-cta {
+  @apply mt-auto h-12 w-full rounded-xl border-0 text-lg font-semibold text-white;
+  font-family: var(--font-mona-sans), "Inter", sans-serif;
+  background: linear-gradient(180deg, #4d5568 0%, #2f3442 100%);
+  box-shadow: var(--shadow-soft);
+}
+
+.pricing-v2-cta:hover {
+  background: linear-gradient(180deg, #596177 0%, #363c4d 100%);
+}
+
+.pricing-v2-cta:disabled {
+  @apply cursor-default;
+  background: #f3e4c7;
+  color: #212a3b;
+  box-shadow: none;
+}
+
 /* Subscription Plan Cards - maintain consistent height */
 .cl-pricingTableCard {
   min-height: 420px !important;
   display: flex !important;
   flex-direction: column !important;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease !important;
+}
+
+.cl-pricingTableCard:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-soft-lg) !important;
 }
 
 .cl-pricingTableCardContent {

@@ -231,7 +231,12 @@ const UploadForm = () => {
 
       if(!book.success){
         await cleanupUploadedFiles(uploadedPdf.pathname, uploadedCover.pathname);
-        toast.error(book.error || "Failed to create book. Please try again.");
+        const errorMessage = book.error || "Failed to create book. Please try again.";
+        toast.error(errorMessage);
+        if (errorMessage.includes("Upgrade to add more books.")) {
+          router.push("/subscriptions");
+          return;
+        }
         resetFormAndFiles();
         return;
       }

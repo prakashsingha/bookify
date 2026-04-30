@@ -3,11 +3,14 @@
 import Book from "@/database/models/book.model";
 import connectToDb from "@/database/mongoose";
 import { CreateBook, SearchBookSegment, TextSegment } from "@/types";
-import { generateSlug, serializeData } from "../utils";
+import { escapeRegex, generateSlug, serializeData } from "../utils";
 import BookSegment from "@/database/models/book-segment.model";
 import mongoose from "mongoose";
+import { getCurrentUserPlan } from "@/lib/subscription.server";
+import { PLANS } from "@/lib/subscription-constants";
 
 export const createBook = async (data: CreateBook) => {
+  let session: mongoose.ClientSession | null = null;
   try {
     await connectToDb();
     const slug = generateSlug(data.title);
@@ -29,23 +32,74 @@ export const createBook = async (data: CreateBook) => {
       };
     }
 
-    // TODO: Check subscription limits before creating a new book
-    const book = await Book.create({
-      ...data,
-      slug,
-      clerkId: data.clerkId,
-      totalSegments: 0,
-    });
+    const plan = await getCurrentUserPlan();
+    const planLimits = PLANS[plan];
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    const existingBooksCount = await Book.countDocuments({ clerkId: data.clerkId }).session(session);
+
+    if (existingBooksCount >= planLimits.maxBooks) {
+      await session.abortTransaction();
+      return {
+        success: false,
+        error: `Your ${plan} plan allows up to ${planLimits.maxBooks} book${planLimits.maxBooks === 1 ? "" : "s"}. Upgrade to add more books.`,
+      };
+    }
+
+    const [book] = await Book.create(
+      [
+        {
+          ...data,
+          slug,
+          clerkId: data.clerkId,
+          totalSegments: 0,
+        },
+      ],
+      { session },
+    );
+
+    await session.commitTransaction();
     return {
       success: true,
       alreadyExists: false,
       data: serializeData(book),
     };
   } catch (error) {
+    if (session) {
+      await session.abortTransaction();
+    }
+
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      typeof error.code === "number" &&
+      error.code === 11000
+    ) {
+      const slug = generateSlug(data.title);
+      if (slug) {
+        const existingBook = await Book.findOne({
+          slug,
+          clerkId: data.clerkId,
+        }).lean();
+        if (existingBook) {
+          return {
+            success: true,
+            alreadyExists: true,
+            data: serializeData(existingBook),
+          };
+        }
+      }
+    }
+
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
     };
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
 };
 
@@ -161,6 +215,41 @@ export const getAllBooks = async (clerkId: string) => {
     };
   }
 };
+
+/** Library list with optional case-insensitive regex match on title or author (query escaped for safe substring search). */
+export const getLibraryBooks = async (clerkId: string, searchQuery?: string) => {
+  try {
+    await connectToDb();
+    const trimmed = searchQuery?.trim() ?? "";
+    const filter: Record<string, unknown> = { clerkId };
+    if (trimmed) {
+      const pattern = escapeRegex(trimmed);
+      filter.$or = [
+        { title: { $regex: pattern, $options: "i" } },
+        { author: { $regex: pattern, $options: "i" } },
+      ];
+    }
+    const books = await Book.find(filter).sort({ createdAt: -1 }).lean();
+    return {
+      success: true,
+      data: serializeData(books),
+    };
+  } catch (error) {
+    console.error("Error getting library books", error);
+    return {
+      success: false,
+      data: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+};
+
+export async function setLibrarySearchQuery(formData: FormData) {
+  const raw = formData.get("query");
+  const query = typeof raw === "string" ? raw : "";
+  const trimmed = query.trim();
+  return trimmed ? `/?query=${encodeURIComponent(trimmed)}` : "/";
+}
 
 export const searchBookSegments = async (
   bookId: string,
