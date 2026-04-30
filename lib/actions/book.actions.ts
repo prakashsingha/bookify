@@ -6,6 +6,8 @@ import { CreateBook, SearchBookSegment, TextSegment } from "@/types";
 import { generateSlug, serializeData } from "../utils";
 import BookSegment from "@/database/models/book-segment.model";
 import mongoose from "mongoose";
+import { getCurrentUserPlan } from "@/lib/subscription.server";
+import { PLANS } from "@/lib/subscription-constants";
 
 export const createBook = async (data: CreateBook) => {
   try {
@@ -29,7 +31,17 @@ export const createBook = async (data: CreateBook) => {
       };
     }
 
-    // TODO: Check subscription limits before creating a new book
+    const plan = await getCurrentUserPlan();
+    const planLimits = PLANS[plan];
+    const existingBooksCount = await Book.countDocuments({ clerkId: data.clerkId });
+
+    if (existingBooksCount >= planLimits.maxBooks) {
+      return {
+        success: false,
+        error: `Your ${plan} plan allows up to ${planLimits.maxBooks} book${planLimits.maxBooks === 1 ? "" : "s"}. Upgrade to add more books.`,
+      };
+    }
+
     const book = await Book.create({
       ...data,
       slug,
