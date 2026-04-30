@@ -102,6 +102,10 @@ export const useVapi = (book: IBook) => {
   const isStoppingRef = useRef<boolean>(false);
   const isStartingRef = useRef<boolean>(false);
   const suppressEventsUntilRef = useRef<number>(0);
+  const ignoreCallEndUntilRef = useRef<number>(0);
+  const ignoreCallEndCountRef = useRef<number>(0);
+  const stopCompletedAtRef = useRef<number>(0);
+  const stopReleaseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const durationRef = useLatestRef(duration);
   const maxDurationSecondsRef = useLatestRef(maxDurationSeconds);
@@ -143,6 +147,12 @@ export const useVapi = (book: IBook) => {
     }
   };
 
+  const clearStopReleaseTimeout = () => {
+    if (!stopReleaseTimeoutRef.current) return;
+    clearTimeout(stopReleaseTimeoutRef.current);
+    stopReleaseTimeoutRef.current = null;
+  };
+
   const startDurationTimer = () => {
     clearDurationTimers();
     startTimerRef.current = setTimeout(() => {
@@ -156,12 +166,22 @@ export const useVapi = (book: IBook) => {
     }, 0);
   };
 
+  const wait = (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
   const start = useCallback(async () => {
     let createdSessionId: string | null = null;
     if (isStartingRef.current || isStoppingRef.current || status !== "Idle") return;
     isStartingRef.current = true;
     setIsBusy(true);
     suppressEventsUntilRef.current = 0;
+    ignoreCallEndUntilRef.current = Date.now() + 2500;
+    const elapsedSinceStop = Date.now() - stopCompletedAtRef.current;
+    if (elapsedSinceStop < 1200) {
+      await wait(1200 - elapsedSinceStop);
+    }
 
     if (!userId) {
       isStartingRef.current = false;
@@ -217,6 +237,7 @@ export const useVapi = (book: IBook) => {
         //   speed: VOICE_SETTINGS.speed,
         // },
       });
+      getVapi().setMuted(false);
 
       setStatus("starting");
     } catch (error) {
@@ -249,19 +270,38 @@ export const useVapi = (book: IBook) => {
     setIsBusy(true);
     setStatus("Idle");
     suppressEventsUntilRef.current = Date.now() + 4000;
+    ignoreCallEndUntilRef.current = Date.now() + 5000;
+    ignoreCallEndCountRef.current = 2;
     clearDurationTimers();
     try {
       const vapiInstance = getVapi();
-      vapiInstance.setMuted(true);
-      vapiInstance.end();
+      const callAtStopStart = vapiInstance.getDailyCallObject();
       await vapiInstance.stop();
+      await wait(120);
+
+      const currentCall = vapiInstance.getDailyCallObject();
+      const shouldDestroyStaleCall =
+        !!callAtStopStart && currentCall === callAtStopStart;
+
+      if (shouldDestroyStaleCall) {
+        await callAtStopStart.destroy();
+      }
+
+      const sessionId = sessionIdRef.current;
+      if (sessionId) {
+        await endVoiceSession(sessionId, durationRef.current);
+        sessionIdRef.current = null;
+      }
     } catch (error) {
       console.error("Error stopping session", error);
       setLimitError("An error occurred while stopping the session");
     } finally {
-      // Fallback reset in case Vapi misses/doesn't emit call-end.
-      isStoppingRef.current = false;
-      setIsBusy(false);
+      clearStopReleaseTimeout();
+      stopReleaseTimeoutRef.current = setTimeout(() => {
+        isStoppingRef.current = false;
+        stopCompletedAtRef.current = Date.now();
+        setIsBusy(false);
+      }, 1400);
     }
   }, []);
 
@@ -285,6 +325,11 @@ export const useVapi = (book: IBook) => {
     };
 
     const onCallEnd = async () => {
+      if (ignoreCallEndCountRef.current > 0) {
+        ignoreCallEndCountRef.current -= 1;
+        return;
+      }
+      if (Date.now() < ignoreCallEndUntilRef.current) return;
       if (isStartingRef.current) return;
       clearDurationTimers();
       setStatus("Idle");
@@ -296,6 +341,8 @@ export const useVapi = (book: IBook) => {
       if (!sessionId) {
         isStartingRef.current = false;
         isStoppingRef.current = false;
+        stopCompletedAtRef.current = Date.now();
+        clearStopReleaseTimeout();
         setIsBusy(false);
         return;
       }
@@ -308,6 +355,8 @@ export const useVapi = (book: IBook) => {
         sessionIdRef.current = null;
         isStartingRef.current = false;
         isStoppingRef.current = false;
+        stopCompletedAtRef.current = Date.now();
+        clearStopReleaseTimeout();
         setIsBusy(false);
       }
     };
@@ -323,15 +372,34 @@ export const useVapi = (book: IBook) => {
     };
 
     const onError = (error: unknown) => {
-      console.error("Vapi runtime error", error);
+      if (shouldIgnoreRuntimeEvents()) return;
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : "";
+
+      const isExpectedTeardownError =
+        /destroy|ended|already in progress|reconnect|cancel|closed/i.test(errorMessage);
+
+      if (!isExpectedTeardownError) {
+        console.warn("Vapi runtime warning", error);
+      }
+
       clearDurationTimers();
       setStatus("Idle");
       setCurrentMessage("");
       setCurrentUserMessage("");
       isStartingRef.current = false;
       isStoppingRef.current = false;
+      stopCompletedAtRef.current = Date.now();
+      clearStopReleaseTimeout();
       setIsBusy(false);
-      setLimitError("Voice session failed. Please try again.");
+      if (!isExpectedTeardownError) {
+        setLimitError("Voice session failed. Please try again.");
+      }
     };
 
     const onMessage = (message: unknown) => {
@@ -377,6 +445,7 @@ export const useVapi = (book: IBook) => {
 
     return () => {
       clearDurationTimers();
+      clearStopReleaseTimeout();
       vapiInstance.removeListener("call-start", onCallStart);
       vapiInstance.removeListener("call-end", onCallEnd);
       vapiInstance.removeListener("speech-start", onSpeechStart);

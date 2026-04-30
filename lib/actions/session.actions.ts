@@ -95,7 +95,7 @@ export const endVoiceSession = async (
         endedAt: new Date(),
         durationSeconds,
       },
-      { new: true },
+      { returnDocument: "after" },
     );
 
     if (!session) {
